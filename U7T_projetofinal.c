@@ -74,6 +74,12 @@ int main() {
     gpio_pull_up(I2C_SDA_PIN);
     gpio_pull_up(I2C_SCL_PIN);
     ssd1306_init(&ssd, 128, 64, false, ENDERECO, I2C_PORT);
+    ssd1306_config(&ssd); // Configura o ssd
+    ssd1306_send_data(&ssd); // Envia os dados para o ssd
+
+    // Limpa o ssd. O ssd inicia com todos os pixels apagados.
+    ssd1306_fill(&ssd, false);
+    ssd1306_send_data(&ssd);
     
     while (1) {
         adc_select_input(0);
