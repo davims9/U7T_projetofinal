@@ -21,8 +21,8 @@ volatile bool modo_selecao = false;
 volatile uint16_t potencia_led = 2048; // 50% de 4095
 volatile uint16_t humidade = 50; // 50%
 volatile uint16_t humidade_minima = 25; // Limite de umidade inicial
-volatile uint32_t last_button_joystick_time = 0;
-volatile uint32_t last_button_b_time = 0;
+volatile uint32_t last_button_joystick_time = 200;
+volatile uint32_t last_button_b_time = 200;
 ssd1306_t ssd;
 
 // Função de debouncing
@@ -50,6 +50,11 @@ void setup_pwm(uint pin) {
     uint slice_num = pwm_gpio_to_slice_num(pin);
     pwm_set_wrap(slice_num, 4095);
     pwm_set_enabled(slice_num, true);
+}
+
+// Função para converter valor de 0-4095 para porcentagem (0%-100%)
+uint8_t pwm_to_percent(uint16_t pwm_value) {
+    return (uint8_t)((pwm_value * 100) / 4095);
 }
 
 int main() {
@@ -83,25 +88,29 @@ int main() {
     
     while (1) {
         adc_select_input(0);
-        uint16_t x_valor = adc_read();
+        uint16_t y_valor = adc_read();
         
         if (modo_selecao) {
-            if (x_valor < 4000 && potencia_led > 100) potencia_led -= 100;
-            if (x_valor > 50 && potencia_led < 4095) potencia_led += 100;
+            if (y_valor < 4000 && potencia_led > 50) potencia_led -= 50;
+            if (y_valor > 50 && potencia_led < 4095) potencia_led += 50;
         } else {
-            if (x_valor < 4000 && humidade > 0) humidade--;
-            if (x_valor > 50 && humidade < 100) humidade++;
+            if (y_valor < 4000 && humidade > 0) humidade--;
+            if (y_valor > 50 && humidade < 100) humidade++;
         }
         
         pwm_set_gpio_level(LED_GREEN, (humidade < humidade_minima) ? potencia_led : 0);
         
         ssd1306_fill(&ssd, false);
         char buffer[50];
-        sprintf(buffer, "UMIDADE: %d%%", humidade);
+        sprintf(buffer, "UMIDADE %d%%", humidade);
         ssd1306_draw_string(&ssd, buffer, 0, 0);
-        sprintf(buffer, "LED: %d", potencia_led);
+
+        // Exibe a potência do LED em porcentagem
+        uint8_t potencia_percent = pwm_to_percent(potencia_led);
+        sprintf(buffer, "LED %d%% ", potencia_percent);
         ssd1306_draw_string(&ssd, buffer, 0, 20);
-        sprintf(buffer, "UMIDADE MIN: %d%%", humidade_minima);
+
+        sprintf(buffer, "UMIDADE MIN %d%%", humidade_minima);
         ssd1306_draw_string(&ssd, buffer, 0, 40);
         ssd1306_send_data(&ssd);
         
